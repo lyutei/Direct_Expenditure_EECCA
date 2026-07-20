@@ -1,0 +1,186 @@
+---
+title: "Turkmenistan Modelling Corr UPD"
+output: html_document
+date: "2026-07-15"
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(scipen = 999)   # print full numbers, no scientific notation
+```
+
+
+**Modelling the Cancer Expenditure in Turkmenistan**
+
+
+*General Background Information about Turkmenistan*
+
+Turkmenistan lacks a national insurance system, and most cancer financing comes from the government (which can also be a foreign loan or aid) and out-of-pocket (OOP) payments. Here, we model only the governmental expenditure that also likely includes funds of foreign origin.
+
+Unlike in the other 17 countries, Turkmenistan does not publish an official cancer expenditure figure. However, its government/compulsory health financing is reported in the WHO Global Health Expenditure Database (GHED), which we use directly as the health-expenditure base instead of reconstructing it from the state budget.
+
+
+*Formula for Estimating the Governmental Cancer Expenditure*
+
+Formula to estimate Turkmenistan's cancer expenditure is:
+
+Tur_cancer = Tur_prop * Tur_total
+
+  + Tur_cancer - cancer expenditure in Turkmenistan in 2024
+  + Tur_total - total public (government/compulsory) healthcare expenditure for Turkmenistan in 2024
+  + Tur_prop - proportion of public health expenditure on cancer in 2024
+
+
+*Estimating the Total Public Health Expenditure (Tur_total)*
+
+We take Turkmenistan's government/compulsory health financing directly from GHED [1], using the HF.1 aggregate — "Government schemes and compulsory contributory health care financing schemes" — in national currency (million manat). This matches the definition of the public/compulsory base (GCHCFS) used for the other countries. The latest observed year in GHED is 2023, at 2,597 million manat. As Turkmenistan has no insurance system, HF.1 (2,597) and GGHE-D (2,568) differ by roughly 1%; we use HF.1 for consistency with the anchor countries.
+
+We project the 2023 value to 2024 using Turkmenistan's GDP deflator (linked series, annual % change) [2], applying only the post-base-year rate (2024 = 6.83%). 
+
+``` {r}
+Tur_HF1_2023 <- 2597000000        #manat, GHED HF.1,latest observed 2023 [1]
+defl_2024    <- 6.826100887/100 #GDP deflator, linked series, 2024 [2]
+
+Tur_total <- Tur_HF1_2023 * (1 + defl_2024)   #2023->2024 projection
+
+cat("GHED HF.1 base (2023), manat:", Tur_HF1_2023, "\n")
+cat("2024 deflator applied (%):", round(defl_2024 * 100, 2), "\n")
+cat("Estimated total public (government/compulsory) health expenditure, 2024, manat:",
+    round(Tur_total), "\n")
+cat("  same value in million manat:", round(Tur_total / 1e6), "\n")
+```
+
+*Estimating the Proportion of Health Expenditure Spent on Cancer (Tur_prop)*
+
+1. We included 7 countries, where we could reliably identify what % of the governmental and/or insurance healthcare expenditure goes to cancer. Then, we use these countries to estimate the % of healthcare expenditure in Turkmenistan going to cancer.
+
+``` {r}
+
+# Kazakhstan, Currency: Tenge
+Kaz_total <- 2227988999600 #[3]
+Kaz_cancer <- 193938343000 #[4]
+Kaz_prop <- Kaz_cancer / Kaz_total * 100
+
+# Armenia, Currency: Dram
+Arm_total <- 157092750466.177 #[5]
+Arm_cancer <- 12959959308.6761 #[5]
+Arm_prop <- Arm_cancer / Arm_total * 100
+
+# Estonia, Currency: Euro
+Est_total <- 2627749438.2 #[6][7]
+Est_cancer <- 316782803 #[7]
+Est_prop <- Est_cancer / Est_total * 100
+
+# Russia, Currency: Ruble
+Rus_total <- 6700000000000 #[8]
+Rus_cancer <- 386649513200 #[9]
+Rus_prop <- Rus_cancer / Rus_total * 100
+
+# Slovenia, Currency: Euro
+Slo_total <- 5352300000 #[10]
+Slo_cancer <- 471756569.19 #[11]
+Slo_prop <- Slo_cancer / Slo_total * 100
+
+# Uzbekistan, Currency: Som
+Uzb_total <- 4585752255600 #[13]
+Uzb_cancer <- 164300000000 #[14]
+Uzb_prop <- Uzb_cancer / Uzb_total * 100
+
+# Azerbaijan, Currency: Manat
+Aze_total <- 1829072000 #[15]
+Aze_cancer <- 48300000 #[15]
+Aze_prop <- Aze_cancer / Aze_total * 100
+
+
+cat("% of public healthcare expenditure going to cancer in Kazakhstan is",
+    round(Kaz_prop, 2), "%\n")
+
+cat("% of public healthcare expenditure going to cancer in Armenia is",
+    round(Arm_prop, 2), "%\n")
+
+cat("% of public healthcare expenditure going to cancer in Estonia is",
+    round(Est_prop, 2), "%\n")
+
+cat("% of public healthcare expenditure going to cancer in Russia is",
+    round(Rus_prop, 2), "%\n")
+
+cat("% of public healthcare expenditure going to cancer in Slovenia is",
+    round(Slo_prop, 2), "%\n")
+
+cat("% of public healthcare expenditure going to cancer in Uzbekistan is",
+    round(Uzb_prop, 2), "%\n")
+
+cat("% of public healthcare expenditure going to cancer in Azerbaijan is",
+    round(Aze_prop, 2), "%\n")
+
+```
+
+2. We assemble the anchor shares and weight them by how close each country's GDP per capita is to Turkmenistan's. The anchor shares are generally lowest for the lowest-income countries and highest for the highest-income country (Estonia), so cancer's share of public health spending appears to rise with national income. Weights are the inverse of the distance in GDP per capita [16], normalised to sum to one, so income-similar countries count most.
+
+```{r}
+tur_gdp_pc <- 5904.25773   #Turkmenistan GDP per capita, USD [16]
+
+anchor_prop <- c(Kaz = Kaz_prop, Arm = Arm_prop, Est = Est_prop, Rus = Rus_prop, Slo = Slo_prop, Uzb = Uzb_prop, Aze = Aze_prop)
+
+# GDP per capita (current USD), 2024 [16]
+gdp_pc <- c(Kaz = 14154.6325, Arm = 8556.21407, Est = 31428.3548, Rus = 14961.89, Slo = 34301.0319, Uzb = 3337.45492, Aze = 7294.64276)
+
+dist    <- abs(gdp_pc - tur_gdp_pc)
+weights <- (1 / dist) / sum(1 / dist) #inverse-distance weights, sum to 1
+
+cat("Anchor shares (%):\n");        print(round(anchor_prop, 2))
+cat("\nGDP-per-capita weights:\n"); print(round(weights, 4))
+
+prop_weighted <- sum(weights * anchor_prop)   # GDP-weighted central share
+cat("\nGDP-weighted central share:", round(prop_weighted, 2), "%\n")
+```
+
+
+3. Now we apply the weighted share to Turkmenistan and report a central value with a plausible range:
+
+```{r}
+# GDP-weighted cancer expenditure
+Tur_cancer_central <- Tur_total * prop_weighted / 100
+
+# Range: lowermost and uppermost observed anchor shares applied to the same base
+Tur_cancer_low  <- Tur_total * min(anchor_prop) / 100
+Tur_cancer_high <- Tur_total * max(anchor_prop) / 100
+
+cat("Public cancer expenditure, Turkmenistan 2024 (manat):\n")
+cat("  central (GDP-weighted,", round(prop_weighted, 2), "%):",
+    round(Tur_cancer_central), "\n")
+cat("  lowermost  (", round(min(anchor_prop), 2), "% ):",
+    round(Tur_cancer_low), "\n")
+cat("  uppermost (", round(max(anchor_prop), 2), "%):",
+    round(Tur_cancer_high), "\n\n")
+
+cat("Public cancer expenditure, Turkmenistan 2024 (million manat):\n")
+cat("  central   :", round(Tur_cancer_central / 1e6), "\n")
+cat("  lowermost :", round(Tur_cancer_low  / 1e6), "\n")
+cat("  uppermost :", round(Tur_cancer_high / 1e6), "\n")
+```
+
+We do not report a statistical confidence interval. The anchor number is small and not a random sample. Instead we give the central (GDP-weighted) estimate and a plausible range between the lowermost and uppermost anchor shares.
+
+
+
+
+*References*
+
+  + [1] Global Health Expenditure Database, World Health Organization. HF.1 "Government schemes and compulsory contributory health care financing schemes", Turkmenistan, Million NCU (latest observed year 2023). Available at: https://apps.who.int/nha/database/ViewData/Indicators/en. Accessed: 15.07.2026.
+  + [2] GDP deflator: linked series (annual % change), Turkmenistan, 2024. World Bank (series NY.GDP.DEFL.KD.ZG.AD). Available at: https://data.worldbank.org/indicator/NY.GDP.DEFL.KD.ZG.AD?locations=TM. Accessed: 15.07.2026.
+  + [3] Annual Report of the Mandatory Social Health Insurance Fund of Republic of Kazakhstan in 2024. Available at: https://msqory.kz/ru/eshche/o-fonde/godovye-otchety-fonda/. Accessed: 04.07.2026.
+  + [4] Annual Report of Budget Implementation of the Ministry of Health of Republic of Kazakhstan in 2024. Available at: https://www.gov.kz/memleket/entities/dsm/documents/1?lang=ru&type=_14. Accessed: 04.07.2026.
+  + [5] National Health Accounts of Armenia. 2024.
+  + [6] European Observatory on Health Systems and Policies. Current health expenditure in 2024 reached historic high. Estonia. Available at: https://eurohealthobservatory.who.int/monitors/health-systems-monitor/updates/hspm/hspm-estonia-2023/current-health-expenditure-in-2024-reached-a-historic-high. Accessed: 05.07.2026.
+  + [7] Annual Health Insurance Fund Report for 2024. Available at: https://tervisekassa.ee/en/organisation/annual-reports. Accessed: 04.07.2026.
+  + [8] Annual Mandatory Social Health Insurance Report in 2024 of Russian federation. Available at: http://omsjournal.ru/wp-content/uploads/2025/08/oms_2025-4_web.pdf. Accessed: 04.07.2026.
+  + [9] Minister of Health of Russia Announcement about Total Health Expenditure in 2024. Available at: https://tass.ru/ekonomika/20790859. Accessed: 04.07.2026.
+  + [10] Health Expenditure and Source of Funding, 2024. Republic of Slovenia Statistical office. Available at: https://www.stat.si/StatWeb/en/news/Index/14355. Accessed: 04.07.2026.
+  + [11] Cancer Expenditure provided to us by the Insurance Fund.
+  + [12] GLOBOCAN 2024. International Agency for Research on Cancer. 2024.
+  + [13] Periodic Financial Reporting of Ministry of Healthcare of Uzbekistan for the 4th quarter of 2024. Ministry of Healthcare of Uzbekistan. Available at: https://gov.uz/ru/ssv/sections/view/112959. Accessed: 07.07.2026.
+  + [14] Ministry of Health of Uzbekistan, 2025 Healthcare Planning. https://gov.uz/uz/ssv/sections/view/54523
+  + [15] Republic of Azerbaijan 2024 annual report on the implementation of the state budget. 2025. Accessed: 07.07.2026.
+  + [16] GDP per capita (current US$). 2024. World Bank. Available at: https://data.worldbank.org/indicator/NY.GDP.PCAP.CD?name_desc=false. Accessed: 07.07.2026.

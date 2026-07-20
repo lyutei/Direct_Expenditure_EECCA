@@ -1,0 +1,177 @@
+---
+title: "Tajikistan Modelling UPD"
+output: html_document
+date: "2026-07-07"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**Modelling the Cancer Expenditure in Tajikistan**
+
+
+*General Background Information about Tajikistan*
+
+The Ministry of Health and Social Protection is responsible for national health policy, as well as for regulating service provision and overall health service management. Almost all health care in Tajikistan is public and managed by the government [17]. Majority of the cancer treatment and diagnosis occurs in the specialized oncological centers. There are five oncological centers with partial avaialability of expenditure data: 
+
+
+1. We have the expenditure in specialized hospitals, that includes oncological centers where the largest chunk of expenditure occurs: 
+  + For 2024, it was 198.0 million Somoni [1]
+  
+2. We also know number of beds in each of the 5 oncological centers of the country: 
+  + Center 1 - 235 beds, Center 2 - 110 beds, Center 3 - 20 beds, Center 3 - 20 beds, and Center 5 - 25 Beds. So the total is: 410 [2]
+  
+
+
+*Formula for Estimating the Cancer Expenditure*
+
+Taj_cancer = Taj_prop * Taj_total
+
+  + Taj_cancer - cancer expenditure in Tajikistan in 2024
+  + Taj_total - total public healthcare expenditure for Tajikistan in 2024
+  + Taj_prop - proportion of public health expenditure on cancer in 2024
+
+
+*Estimating the Total Public Health Expenditure (Taj_total)*
+
+Public health expenditure in Tajikistan in 2024 was 3 744 100 000 Somoni [1].
+
+``` {r}
+Taj_total <- 3744100000   #public health expenditure, Somoni[1]
+cat("Total public health expenditure, 2024:", round(Taj_total / 1e9, 3), "billion Somoni\n")
+```
+
+
+*Estimating the Proportion of Health Expenditure Spent on Cancer (Taj_prop)*
+
+1. We included 7 countries, where we could reliably identify what % of the governmental and/or insurance healthcare expenditure goes to cancer.
+
+``` {r}
+
+# Kazakhstan, Currency: Tenge
+Kaz_total <- 2227988999600 #[3]
+Kaz_cancer <- 193938343000 #[4]
+Kaz_prop <- Kaz_cancer / Kaz_total * 100
+
+# Armenia, Currency: Dram
+Arm_total <- 157092750466.177 #[5]
+Arm_cancer <- 12959959308.6761 #[5]
+Arm_prop <- Arm_cancer / Arm_total * 100
+
+# Estonia, Currency: Euro
+Est_total <- 2627749438.2 #[6][7]
+Est_cancer <- 316782803 #[7]
+Est_prop <- Est_cancer / Est_total * 100
+
+# Russia, Currency: Ruble
+Rus_total <- 6700000000000 #[8]
+Rus_cancer <- 386649513200 #[9]
+Rus_prop <- Rus_cancer / Rus_total * 100
+
+# Slovenia, Currency: Euro
+Slo_total <- 5352300000 #[10]
+Slo_cancer <- 471756569.19 #[11]
+Slo_prop <- Slo_cancer / Slo_total * 100
+
+# Uzbekistan, Currency: Som
+Uzb_total <- 4585752255600 #[13]
+Uzb_cancer <- 164300000000 #[14]
+Uzb_prop <- Uzb_cancer / Uzb_total * 100
+
+# Azerbaijan, Currency: Manat
+Aze_total <- 1829072000 #[15]
+Aze_cancer <- 48300000 #[15]
+Aze_prop <- Aze_cancer / Aze_total * 100
+
+
+cat("% of public healthcare expenditure going to cancer in Kazakhstan is",
+    round(Kaz_prop, 2), "%\n")
+
+cat("% of public healthcare expenditure going to cancer in Armenia is",
+    round(Arm_prop, 2), "%\n")
+
+cat("% of public healthcare expenditure going to cancer in Estonia is",
+    round(Est_prop, 2), "%\n")
+
+cat("% of public healthcare expenditure going to cancer in Russia is",
+    round(Rus_prop, 2), "%\n")
+
+cat("% of public healthcare expenditure going to cancer in Slovenia is",
+    round(Slo_prop, 2), "%\n")
+
+cat("% of public healthcare expenditure going to cancer in Uzbekistan is",
+    round(Uzb_prop, 2), "%\n")
+
+cat("% of public healthcare expenditure going to cancer in Azerbaijan is",
+    round(Aze_prop, 2), "%\n")
+
+```
+
+2. We assemble the anchor shares and weight them by how close each country's GDP per capita is to Tajikistan's. The anchor shares are generally lower for the low-income countries and higher for the highest-income country (Estonia)[16]. Weights normalised to sum to one, so income-similar countries count most.
+
+```{r}
+taj_gdp_pc <- 1362.02559981695   #Tajikistan GDP per capita, USD [16]
+
+anchor_prop <- c(Kaz = Kaz_prop, Arm = Arm_prop, Est = Est_prop, Rus = Rus_prop,Slo = Slo_prop, Uzb = Uzb_prop, Aze = Aze_prop)
+
+# GDP per capita (current USD), 2024 [16]
+gdp_pc <- c(Kaz = 14154.6325, Arm = 8556.21407, Est = 31428.3548, Rus = 14961.89, Slo = 34301.0319, Uzb = 3337.45492, Aze = 7294.64276)
+
+dist    <- abs(gdp_pc - taj_gdp_pc)
+weights <- (1 / dist) / sum(1 / dist)  # inverse-distance weights, sum to 1
+
+cat("Anchor shares (%):\n");        print(round(anchor_prop, 2))
+cat("\nGDP-per-capita weights:\n"); print(round(weights, 3))
+
+prop_weighted <- sum(weights * anchor_prop)   # GDP-weighted central share
+cat("\nGDP-weighted central share:", round(prop_weighted, 2), "%\n")
+```
+
+
+3. Now we apply the weighted share to Tajikistan and report a central value with a plausible range:
+
+```{r}
+#GDP-weighted
+Taj_cancer_central <- Taj_total * prop_weighted / 100
+
+#lowest and highest observed shares
+Taj_cancer_low  <- Taj_total * min(anchor_prop) / 100
+Taj_cancer_high <- Taj_total * max(anchor_prop) / 100
+
+cat("Public cancer expenditure, Tajikistan 2024 (million Somoni):\n")
+cat("  central (GDP-weighted,", round(prop_weighted, 2), "%):",
+    round(Taj_cancer_central / 1e6, 1), "\n")
+cat("  lowest  (", round(min(anchor_prop), 2), "% ):",
+    round(Taj_cancer_low  / 1e6, 1), "\n")
+cat("  highest (", round(max(anchor_prop), 2), "%):",
+    round(Taj_cancer_high / 1e6, 1), "\n")
+```
+
+We do not report a confidence interval. The number of anchors is small and not a random sample. Instead we give the central (GDP-weighted) estimate and a plausible range between the lowest and highest anchor shares. 
+
+From an earlier bottom-up analysis, total specialized-hospital spending in Tajikistan was ~198 million Somoni, which is 10 million Somoni more than our estimated 188.4 million Somoni.  
+
+
+*References*
+
+ + [1] Ministry of Finance of Tajik Republic, Annual Report about Governmental Budget Execution          in 2024.Accessed: June 26, 2026. https://moliya.tj/Documents/Index/531
+  + [2] Republican Oncological Scientific Center. Accessed: June 26.06.2026.               https://onco.tj/%D0%BE-%D1%86%D0%B5%D0%BD%D1%82%D1%80%D0%B5/
+  + [3] Annual Report of the Mandatory Social Health Insurance Fund of Republic of Kazakhstan in 2024. Available at: https://msqory.kz/ru/eshche/o-fonde/godovye-otchety-fonda/. Accessed: 04.07.2026. 
+  + [4] Annual Report of Budget Implementation of the Ministry of Health of Republic of Kazakhstan in 2024. Available at: https://www.gov.kz/memleket/entities/dsm/documents/1?lang=ru&type=_14. Accessed: 04.07.2026.  
+  + [5] National Health Accounts of Armenia. 2024. 
+  + [6] European Observatory on Health Systems and Policies. Current health expenditure in 2024 reached historic high. Estonia. Available at: https://eurohealthobservatory.who.int/monitors/health-systems-monitor/updates/hspm/hspm-estonia-2023/current-health-expenditure-in-2024-reached-a-historic-high. Accessed: 05.07.2026.
+  + [7] Annual Health Insurance Fund Report for 2024. Available at: https://tervisekassa.ee/en/organisation/annual-reports. Accessed: 04.07.2026.
+  + [8] Annual Mandatory Social Health Insurance Report in 2024 of Russian federation. Available at: http://omsjournal.ru/wp-content/uploads/2025/08/oms_2025-4_web.pdf. Accessed: 04.07.2026.
+  + [9] Minister of Health of Russia Announcement about Total Health Expenditure in 2024. Available at:https://tass.ru/ekonomika/20790859. Accessed: 04.07.2026. 
+  + [10] Health Expoenditure and Source of Funding, 2024. Republic of Slovenia Statistical office. Available at: https://www.stat.si/StatWeb/en/news/Index/14355. Accessed: 04.07.2026. 
+  + [11] Cancer Expenditure provided to us by the Insurance Fund
+  + [12] GLOBACAN 2024. International Agency for Research on Cancer. 2024. 
+  + [13] Periodic Financial Reporting of Ministry of Healthcare of Uzbekistan for the 4th quarter of 2024. Ministry of Healthcare of Uzbekistan. Available at: https://gov.uz/ru/ssv/sections/view/112959. Accessed: 07.07.2026.
+  + [14] Ministry of Health of Uzbekistan, 2025 Healthcare Planning. https://gov.uz/uz/ssv/sections/view/54523
+  + [15] Republic of Azerbaijan 2024 annual report on the implementation of the state budget. 2025. Available at: https://fra01.safelinks.protection.outlook.com/GetUrlReputation. Accessed: 07.07.2026
+   + [16] GDP per capita (current US$). 2024. World Bank.Available at: https://data.worldbank.org/indicator/NY.GDP.PCAP.CD?name_desc=false. Accessed: 07.07.2026.
+  + [17] Health Systems in Action. Tajikistan. 2024. World Health Organitaion.
+  
+
+   

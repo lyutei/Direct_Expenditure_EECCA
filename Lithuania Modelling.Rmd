@@ -1,0 +1,83 @@
+---
+title: "Lithuania Modelling"
+output: html_document
+date: "2026-07-06"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+**Modelling the Cancer Expenditure in Lithuania**
+
+
+*General Background Information about Lithuania*
+
+Cancer care in Lithuania is largely financed through the Compulsory Health Insurance Fund (PSDF), administered by the National Health Insurance Fund (VLK) [1]. The figures used here are public expenditure and do not include out-of-pocket (OOP) payments.
+
+For 2024, two of the three cancer expenditure components are available: cancer pharmaceuticals and cancer screening. Cancer pharmaceuticals are taken as the oncology-specific subset of ATC group L (≈ €200 million[3]), rather than the full group-L total (€243.4 million [2]), which also contains immunosuppressants used for non-oncological conditions. Cancer screening expenditure is reported directly for 2024 (€21.66 million [4]).
+
+The third component, cancer treatment (inpatient and outpatient services), is not reported separately for 2024. However, a full component breakdown is available for 2021 [4]: 
+  + 128.5 mill EUR - outpatient + inpatient 
+  + 153 mill EUR - pharmaceuticals
+  + 14 mill EUR - prevention (screening). 
+
+We therefore model only the treatment component for 2024: we take the 2021 cancer-treatment figure, express it as a share of total PSDF personal health-care services in 2021, and apply that share to the 2024 services. This anchors the growth to Lithuania's own health-services spending rather than to general inflation or to foreign comparators.
+
+
+*Formula for Estimating the Lithuanian Cancer Expenditure*
+
+Lit_cancer_2024 = Lit_drug_2024 + Lit_screen_2024 + Lit_treat_2024
+
+  + Lit_cancer_2024 — total public cancer expenditure in Lithuania in 2024 (estimated)
+  + Lit_drug_2024 — cancer pharmaceuticals in 2024 ≈ €200 million [2][3]
+  + Lt_screen_2024 — cancer screening in 2024, reported €21.66 million [4]
+  + Lt_treat_2024 — cancer treatment (inpatient + outpatient) in 2024 (modelled)
+
+*Only the treatment component is modelled. It is estimated as Lt_treat_2024 = treat_share_2021 × services_2024, where treat_share_2021 is the 2021 cancer-treatment share of total PSDF personal health-care services, and services_2024 is the 2024 services envelope.*
+
+```{r}
+#2024 reported components (EUR)
+Lit_drug_2024   <- 200000000     # oncology-specific compensated drugs, 2024 [2]
+Lit_screen_2024 <- 21663100      # cancer screening programmes, 2024 [4]
+
+#2021 structure used to model 2024 treatment
+Lit_treat_2021 <- 128500000      # cancer treatment (services), 2021 [4]
+services_2021 <- 1697644045     # total PSDF personal health-care services, 2021 [6]
+services_2024 <- 2415322000     # total PSDF personal health-care services, 2024 [4]
+
+# Treatment share held constant, applied to the 2024 services envelope
+treat_share_2021 <- Lit_treat_2021 / services_2021   # ~7.57%
+Lit_treat_2024    <- treat_share_2021 * services_2024 # ~182.8M
+
+cat("2021 treatment share of PSDF services:", round(treat_share_2021 * 100, 2), "%\n")
+cat("Modelled 2024 cancer treatment:       ", round(Lit_treat_2024 / 1e6, 1), "M EUR\n")
+```
+
+The 2021 cancer-treatment expenditure (€128.5M) represented ~7.57% of total PSDF services (€1,697.6M). Applying this share to the 2024 services total (€2,415.3M) gives a modelled 2024 cancer-treatment expenditure of ≈ €182.8 million.
+
+```{r}
+#Assembling the 2024 total
+Lit_cancer_2024 <- Lit_drug_2024 + Lit_screen_2024 + Lit_treat_2024
+
+cat("Public cancer expenditure, Lithuania 2024 (EUR M):\n")
+cat("  drugs (reported):    ", round(Lit_drug_2024 / 1e6, 1), "\n")
+cat("  screening (reported):", round(Lit_screen_2024 / 1e6, 1), "\n")
+cat("  treatment (modelled):", round(Lit_treat_2024 / 1e6, 1), "\n")
+cat("  TOTAL:               ", round(Lit_cancer_2024 / 1e6, 1), "\n")
+```
+
+The estimated total public cancer expenditure in Lithuania in 2024 is ≈ €404.5 million (drugs €200M + screening €21.7M + treatment €182.8M). Two reported components make up €221.7M, and only the treatment component (€182.8M) is modelled.
+
+*Validating the findings: Per capita, €404.5M across a population of ~2.86 million is ≈ €141 per capita, which sits between Latvia (~€90–100) and Estonia/Slovenia (~€214–222), as expected. The cancer-drug figure is corroborated by its stable share of total compensated drugs: €153M of €385.5M in 2021 (40%) versus ≈ €200M of €520.2M in 2024 (38%) [4][5].*
+
+
+*References*
+
+  + [1] Valstybinė ligonių kasa (VLK). Available at: https://ligoniukasa.lrv.lt/. Accessed: 07.07.2026.
+  + [2] PSDF budget expenditure on compensated medicines and medical aids by ATC classification group, 2024. Valstybinė ligonių kasa. 2025-01-27, No. 7K-192.Available at: https://ligoniukasa.lrv.lt/. Accessed: 07.07.2026.
+  + [3] Expenses for reimbursement of oncological drugs exceeded 200 million. Expenses for reimbursement of oncological drugs exceeded 200 million. Available at: https://ligoniukasa.lrv.lt/lt/naujienos/islaidos-onkologiniams-vaistams-kompensuoti-perkope-200-milijonu/. Accessed: 07.07.2026.
+  + [4] 2024 PSDF budget fund allocation (as of 31 December 2024). Valstybinė ligonių kasa. Available at: https://ligoniukasa.lrv.lt/lt/administracine-informacija/informacija-apie-psdf-biudzeta/. Accessed: 07.07.2026.
+  + [5] Onkologinės ligos: investuos ir į gydymą, ir į prevenciją. Valstybinė ligonių kasa. Available at: https://ligoniukasa.lrv.lt/lt/naujienos/onkologines-ligos-investuos-ir-i-gydyma-ir-i-prevencija/. Accessed: 07.07.2026.
+  + [6] 2021 m. PSDF biudžeto vykdymo ataskaitos (Forma 1-PSDF-I). Valstybinė ligonių kasa. Available at:https://ligoniukasa.lrv.lt/lt/administracine-informacija/biudzeto-vykdymo-ataskaitu-rinkiniai/valstybine-ligoniu-kasa-8/. Accessed: 07.07.2026.

@@ -1,0 +1,630 @@
+---
+title: "Plots and Graphs, Minas"
+output: html_document
+date: "2026-07-17"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**Codes used to create plots and figures**
+
+*Graphs based on Table 2. Direct cancer expenditure in 18 EECCA countries in 2024.*
+
+```{r}
+# Armenia with the same methodlogy as others
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(scales)
+library(patchwork)
+
+# Data: Country, Per-Capita ($PPP), Per-Incident-Case ($PPP)
+
+rank_raw <- tibble::tribble(
+  ~Country,        ~Region,          ~PerCapita, ~PerIncident,
+  "Armenia",       "Caucasus",       145,        41070,
+  "Azerbaijan",    "Caucasus",       27,         18334,
+  "Georgia",       "Caucasus",       211,        48535,
+  "Afghanistan",   "Central Asia",   0.04,       67,
+  "Kazakhstan",    "Central Asia",   80.6,       55586,
+  "Kyrgyzstan",    "Central Asia",   6.2,        5003,
+  "Tajikistan",    "Central Asia",   17.5,       22506,
+  "Turkmenistan",  "Central Asia",   52.8,       51626,
+  "Uzbekistan",    "Central Asia",   3.7,        3523,
+  "Belarus",       "Eastern Europe", 101,        19839,
+  "Estonia",       "Eastern Europe", 463,        75978,
+  "Latvia",        "Eastern Europe", 294,        48530,
+  "Lithuania",     "Eastern Europe", 407,        71783,
+  "Moldova",       "Eastern Europe", 43.9,       9290,
+  "Russia",        "Eastern Europe", 129,        29152,
+  "Slovakia",      "Eastern Europe", 236,        40793,
+  "Slovenia",      "Eastern Europe", 452,        67459,
+  "Ukraine",       "Eastern Europe", 30.7,       7554
+)
+
+# colourblind-safe region palette (Okabe-Ito)
+rank_pal <- c("Caucasus"       = "#E69F00",
+              "Central Asia"   = "#009E73",
+              "Eastern Europe" = "#0072B2")
+
+#Panel 1: Per-capita, ranked high -> low
+rank_pc <- rank_raw %>% mutate(Country = reorder(Country, PerCapita))
+
+p_pc <- ggplot(rank_pc, aes(x = PerCapita, y = Country, fill = Region)) +
+  geom_col(width = 0.72) +
+  geom_text(aes(label = comma(PerCapita, accuracy = 0.1)),
+            hjust = -0.15, size = 2.8, family = "serif") +
+  scale_fill_manual(values = rank_pal, name = NULL) +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.18))) +
+  labs(title = "Per-capita cancer expenditure",
+       x = "Per capita ($PPP)", y = NULL) +
+  theme_classic(base_size = 11, base_family = "serif") +
+  theme(plot.title = element_text(hjust = .5, size = 12),
+        legend.position = "none")
+
+#Panel 2: Per-incident-case, ranked high -> low 
+rank_pi <- rank_raw %>% mutate(Country = reorder(Country, PerIncident))
+
+p_pi <- ggplot(rank_pi, aes(x = PerIncident, y = Country, fill = Region)) +
+  geom_col(width = 0.72) +
+  geom_text(aes(label = comma(PerIncident)),
+            hjust = -0.15, size = 2.8, family = "serif") +
+  scale_fill_manual(values = rank_pal, name = NULL) +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.18)), labels = comma) +
+  labs(title = "Per-incident-case cancer expenditure",
+       x = "Per incident case ($PPP)", y = NULL) +
+  theme_classic(base_size = 11, base_family = "serif") +
+  theme(plot.title = element_text(hjust = .5, size = 12),
+        legend.position = "none")
+
+#Combine with a shared bottom legend
+rank_combo <- (p_pc | p_pi) +
+  plot_layout(guides = "collect") +
+  plot_annotation(
+    title = "Cancer Expenditure Rankings Across 18 EECCA Countries",
+    theme = theme(plot.title = element_text(hjust = .5, size = 13, family = "serif"))
+  ) &
+  theme(legend.position = "bottom")
+
+print(rank_combo)
+
+#ggsave("cancer_expenditure_rankings_main.png", rank_combo,
+#       width = 12, height = 6.5, dpi = 400, bg = "white")
+
+```
+
+``` {r}
+# SENSITIVITY: Cancer expenditure ranking — per capita & per incident case
+# Armenia on national NHA basis (90.8% OOP): per-capita 316, per-incident 89,418
+#above figures on Armenia is on the GHED 80% OOP basis. For other countries no NHA data is available. 
+
+#Data: Country, Per-Capita ($PPP), Per-Incident-Case ($PPP)
+rank_raw_sens <- tibble::tribble(
+  ~Country,        ~Region,          ~PerCapita, ~PerIncident,
+  "Armenia",       "Caucasus",       316,        89418,   # national NHA basis
+  "Azerbaijan",    "Caucasus",       27,         18334,
+  "Georgia",       "Caucasus",       211,        48535,
+  "Afghanistan",   "Central Asia",   0.04,       67,
+  "Kazakhstan",    "Central Asia",   80.6,       55586,
+  "Kyrgyzstan",    "Central Asia",   6.2,        5003,
+  "Tajikistan",    "Central Asia",   17.5,       22506,
+  "Turkmenistan",  "Central Asia",   52.8,       51626,
+  "Uzbekistan",    "Central Asia",   3.7,        3523,
+  "Belarus",       "Eastern Europe", 101,        19839,
+  "Estonia",       "Eastern Europe", 463,        75978,
+  "Latvia",        "Eastern Europe", 294,        48530,
+  "Lithuania",     "Eastern Europe", 407,        71783,
+  "Moldova",       "Eastern Europe", 43.9,       9290,
+  "Russia",        "Eastern Europe", 129,        29152,
+  "Slovakia",      "Eastern Europe", 236,        40793,
+  "Slovenia",      "Eastern Europe", 452,        67459,
+  "Ukraine",       "Eastern Europe", 30.7,       7554
+)
+
+# colourblind-safe region palette (Okabe-Ito)
+rank_pal_sens <- c("Caucasus"       = "#E69F00",
+                   "Central Asia"   = "#009E73",
+                   "Eastern Europe" = "#0072B2")
+
+#Panel 1: Per-capita, ranked high -> low
+rank_pc_sens <- rank_raw_sens %>% mutate(Country = reorder(Country, PerCapita))
+
+p_pc_sens <- ggplot(rank_pc_sens, aes(x = PerCapita, y = Country, fill = Region)) +
+  geom_col(width = 0.72) +
+  geom_text(aes(label = comma(PerCapita, accuracy = 0.1)),
+            hjust = -0.15, size = 2.8, family = "serif") +
+  scale_fill_manual(values = rank_pal_sens, name = NULL) +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.18))) +
+  labs(title = "Per-capita cancer expenditure",
+       x = "Per capita ($PPP)", y = NULL) +
+  theme_classic(base_size = 11, base_family = "serif") +
+  theme(plot.title = element_text(hjust = .5, size = 12),
+        legend.position = "none")
+
+#Panel 2: Per-incident-case, ranked high -> low
+rank_pi_sens <- rank_raw_sens %>% mutate(Country = reorder(Country, PerIncident))
+
+p_pi_sens <- ggplot(rank_pi_sens, aes(x = PerIncident, y = Country, fill = Region)) +
+  geom_col(width = 0.72) +
+  geom_text(aes(label = comma(PerIncident)),
+            hjust = -0.15, size = 2.8, family = "serif") +
+  scale_fill_manual(values = rank_pal_sens, name = NULL) +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.18)), labels = comma) +
+  labs(title = "Per-incident-case cancer expenditure",
+       x = "Per incident case ($PPP)", y = NULL) +
+  theme_classic(base_size = 11, base_family = "serif") +
+  theme(plot.title = element_text(hjust = .5, size = 12),
+        legend.position = "none")
+
+#Combine with a shared bottom legend 
+rank_combo_sens <- (p_pc_sens | p_pi_sens) +
+  plot_layout(guides = "collect") +
+  plot_annotation(
+    title = "Cancer Expenditure Rankings Across 18 EECCA Countries (Sensitivity: Armenia NHA basis)",
+    theme = theme(plot.title = element_text(hjust = .5, size = 13, family = "serif"))
+  ) &
+  theme(legend.position = "bottom")
+
+print(rank_combo_sens)
+
+#ggsave("cancer_expenditure_rankings_sensitivity.png", rank_combo_sens,
+#       width = 12, height = 6.5, dpi = 400, bg = "white")
+```
+
+
+*Figure 2. Per-componnet expenditure*
+```{r}
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(scales)
+library(patchwork)   
+
+
+
+bar_raw <- tibble::tribble(
+  ~Country,     ~Screening,   ~Pharmaceuticals, ~Other,
+  "Lithuania",  21.7,         200,              182.8,
+  "Slovenia",   26840103.33,  84322620,         360593845.9,
+  "Moldova",    4790500,      0,                552520230,
+  "Georgia",    NA,           151011920.6,      133135314.9,
+  "Estonia",    7511966,      42146735,         243356243,
+  "Kazakhstan", NA,           56300788282,      137637211718,
+  "Latvia",     5789797,      74935311.68,      95005708,
+  "Armenia",    83,           14413.70,         105918
+)
+
+bar_long <- bar_raw %>%
+  pivot_longer(-Country, names_to = "Category", values_to = "Value") %>%
+  group_by(Country) %>%
+  mutate(pct = Value / sum(Value, na.rm = TRUE)) %>%  
+  ungroup()
+
+# order countries by screening share (NA -> treated as lowest, sorted to the end)
+bar_order <- bar_long %>%
+  filter(Category == "Screening") %>%
+  arrange(desc(pct)) %>% pull(Country)   # NAs sink to the end automatically
+
+bar_long <- bar_long %>%
+  mutate(
+    Country  = factor(Country, levels = bar_order),
+    Category = factor(Category,
+                      levels = c("Screening", "Pharmaceuticals", "Other"),
+                      labels = c("Screening", "Pharmaceuticals", "Other medical services"))
+  )
+
+# colourblind-safe palette
+bar_pal <- c(
+  "Screening"              = "#E69F00",  # orange
+  "Pharmaceuticals"        = "#0072B2",  # blue
+  "Other medical services" = "#009E73"   # green
+)
+
+#Panel 1: full 100% composition
+bar_main <- ggplot(bar_long, aes(x = Country, y = pct, fill = Category)) +
+  geom_col(width = 0.72, colour = "white", linewidth = 0.3,
+           position = position_stack(reverse = TRUE)) +
+  geom_text(aes(label = ifelse(!is.na(pct) & pct >= 0.04,
+                               paste0(round(pct*100), "%"), "")),
+            position = position_stack(vjust = 0.5, reverse = TRUE),
+            colour = "white", size = 3.5, family = "serif") +
+  scale_fill_manual(values = bar_pal, name = NULL) +
+  scale_y_continuous(labels = label_percent(), expand = expansion(mult = c(0, 0.02))) +
+  labs(title = "Composition of GCHCFS Expenditure on Cancer", x = NULL,
+       y = "% of expenditure") +
+  theme_classic(base_size = 12, base_family = "serif") +
+  theme(plot.title = element_text(hjust = .5, size = 13),
+        legend.position = "bottom")
+
+#Panel 2: screening share only (countries with data only) 
+bar_scr <- bar_long %>%
+  filter(Category == "Screening", !is.na(pct)) %>%   # drop Georgia & Kazakhstan
+  mutate(Country = droplevels(Country))              # remove their empty x slots
+
+bar_zoom <- ggplot(bar_scr, aes(x = Country, y = pct)) +
+  geom_col(width = 0.72, fill = bar_pal["Screening"]) +
+  geom_text(aes(label = paste0(round(pct*100, 1), "%")),
+            vjust = -0.4, size = 3.5, family = "serif") +
+  scale_y_continuous(labels = label_percent(), expand = expansion(mult = c(0, 0.12))) +
+  labs(title = "Screening Share, Zoomed-in", x = NULL, y = "%screening share") +
+  theme_classic(base_size = 12, base_family = "serif") +
+  theme(plot.title = element_text(hjust = .5, size = 12))
+
+# combine
+bar_combo <- bar_main / bar_zoom + plot_layout(heights = c(2.4, 1))
+print(bar_combo)
+
+#ggsave("cancer_composition_with_detail.png", bar_combo,
+#       width = 10, height = 8, dpi = 400, bg = "white")
+```
+
+
+*Figure 3. Longitudinal Analysis.*
+
+```{r percapita-plot}
+
+##all countries on one axis
+
+pc7_data <- data.frame(
+  Year       = c(2019, 2020, 2021, 2022, 2023, 2024, 2025),
+  Armenia    = c(        NA,         NA, 14.53935393, 29.56563240, 31.16121038, 29.01402682,         NA),
+  Estonia    = c(        NA, 321.9224796, 326.5245939, 295.4968819, 328.8153358, 365.7751777, 382.4455955),
+  Kazakhstan = c(27.54365164, 33.58047086, 36.66758922, 44.53241539, 60.56892839, 58.01531222, 56.82907644),
+  Moldova    = c(        NA, 22.84499350, 31.72142107, 37.12471370, 31.52723154, 46.73509602,         NA),
+  Russia     = c(78.89591874, 106.0095318, 102.0952648, 92.09236764, 97.82014943, 92.58843846, 99.35289914),
+  Slovakia   = c(        NA, 177.7578003, 202.1497472, 204.0481109, 195.1411889,         NA,         NA),
+  Ukraine    = c(        NA, 14.40647411, 21.27716756, 19.02266181, 17.19708425, 16.86658272, 14.35476985)
+)
+
+pc7_long <- pc7_data %>%
+  pivot_longer(-Year, names_to = "Country", values_to = "Value") %>%
+  filter(!is.na(Value))
+
+pc7_pal <- c(
+  "Armenia"    = "#E69F00",
+  "Estonia"    = "#56B4E9",
+  "Kazakhstan" = "#009E73",
+  "Moldova"    = "#F0E442",
+  "Russia"     = "#0072B2",
+  "Slovakia"   = "#D55E00",
+  "Ukraine"    = "#CC79A7"
+)
+
+pc7_plot <- ggplot(pc7_long, aes(x = Year, y = Value,
+                                 colour = Country, shape = Country)) +
+  geom_line(linewidth = 0.7) +
+  geom_point(size = 2, fill = NA, stroke = 0.8) +
+  scale_colour_manual(values = pc7_pal) +
+  scale_shape_manual(values = c(16, 17, 15, 18, 8, 7, 3)) +
+  scale_x_continuous(breaks = seq(2019, 2025, 1)) +
+  scale_y_log10(
+    breaks = c(10, 20, 50, 100, 200, 400),
+    labels = c("10", "20", "50", "100", "200", "400")
+  ) +
+  labs(
+    title  = "Expenditure on cancer over the years",
+    x = "Year",
+    y = "Per capita expenditure on cancer (PPP$, log scale)",
+    colour = "Country", shape = "Country"
+  ) +
+  theme_bw(base_size = 12, base_family = "serif") +
+  theme(
+    plot.title        = element_text(hjust = 0.5, size = 13),
+    panel.grid.major  = element_line(colour = "grey85", linewidth = 0.3),  # subtle grid
+    panel.grid.minor  = element_line(colour = "grey92", linewidth = 0.2),  # fainter minor grid
+    panel.border      = element_rect(colour = "black", linewidth = 0.6, fill = NA),
+    axis.ticks        = element_line(colour = "black"),
+    axis.ticks.length = unit(-1.5, "pt"),
+    legend.position   = "right",                    # legend OUTSIDE, to the right
+    legend.title      = element_text(face = "bold"),
+    legend.key        = element_blank()
+  )
+
+print(pc7_plot)
+
+#ggsave("percapita_plot_all.png", pc7_plot,
+#       width = 9, height = 5.5, dpi = 400, bg = "white")
+```
+
+Now we make a plot for the appendix for each country. 
+
+```{r percapita-facets}
+pc7_facet_plot <- ggplot(pc7_long, aes(x = Year, y = Value, colour = Country)) +
+  geom_line(linewidth = 0.7) +
+  geom_point(size = 1.8, fill = NA, stroke = 0.8) +
+  scale_colour_manual(values = pc7_pal, guide = "none") +   # colour kept, legend off
+  scale_x_continuous(breaks = seq(2019, 2025, 2)) +         # every 2 yrs (panels are small)
+  scale_y_log10(
+    breaks = c(10, 20, 50, 100, 200, 400),
+    labels = c("10", "20", "50", "100", "200", "400")
+  ) +
+  facet_wrap(~Country, ncol = 4) +          # 7 panels, fixed (shared) axes
+  labs(
+    title = "Expenditure on cancer over the years",
+    x = "Year",
+    y = "Per capita expenditure on cancer (PPP$, log scale)"
+  ) +
+  theme_bw(base_size = 11, base_family = "serif") +
+  theme(
+    plot.title        = element_text(hjust = 0.5, size = 13),
+    strip.background  = element_rect(fill = "grey85", colour = "black", linewidth = 0.4),
+    strip.text        = element_text(face = "bold"),
+    panel.grid.major  = element_line(colour = "grey85", linewidth = 0.3),
+    panel.grid.minor  = element_line(colour = "grey92", linewidth = 0.2),
+    panel.border      = element_rect(colour = "black", linewidth = 0.6, fill = NA),
+    axis.ticks        = element_line(colour = "black"),
+    axis.ticks.length = unit(-1.5, "pt"),
+    panel.spacing.x   = unit(1.2, "lines")   # <- add this
+  )
+
+print(pc7_facet_plot)
+
+#ggsave("percapita_indiv.png", pc7_facet_plot,
+#       width = 11, height = 6, dpi = 400, bg = "white")
+```
+in case questions, we also prepared the unlogged scale, where all figures are on the same plot. It is for the main text: 
+
+```{r}
+#linear unscaled individual
+pc7_facet_linear1 <- ggplot(pc7_long, aes(x = Year, y = Value, colour = Country)) +
+  geom_line(linewidth = 0.7) +
+  geom_point(size = 1.8, fill = NA, stroke = 0.8) +
+  scale_colour_manual(values = pc7_pal, guide = "none") +
+  scale_x_continuous(breaks = seq(2019, 2025, 2)) +
+  scale_y_continuous(expand = expansion(mult = c(0.05, 0.10))) +
+  facet_wrap(~Country, ncol = 4, scales = "free_y") +   # each panel its own y-axis
+  labs(
+    title = "Expenditure on cancer over the years",
+    x = "Year",
+    y = "Per capita expenditure on cancer (PPP$)"
+  ) +
+  theme_bw(base_size = 11, base_family = "serif") +
+  theme(
+    plot.title        = element_text(hjust = 0.5, size = 13),
+    strip.background  = element_rect(fill = "grey85", colour = "black", linewidth = 0.4),
+    strip.text        = element_text(face = "bold"),
+    panel.grid.major  = element_line(colour = "grey85", linewidth = 0.3),
+    panel.grid.minor  = element_line(colour = "grey92", linewidth = 0.2),
+    panel.border      = element_rect(colour = "black", linewidth = 0.6, fill = NA),
+    axis.ticks        = element_line(colour = "black"),
+    axis.ticks.length = unit(-1.5, "pt"),
+    panel.spacing.x   = unit(1.2, "lines")
+  )
+
+print(pc7_facet_linear1)
+
+#ggsave("percapita_indiv_linear_append.png", pc7_facet_linear1,
+#       width = 13, height = 6, dpi = 400, bg = "white")
+```
+
+
+*Figure 4. Slovakia Per-Diagnosis Expenditure*
+
+```{r}
+#Slovakia — cancer expenditure by diagnosis
+#MAIN: heatmap of cumulative % change vs 2020 baseline
+
+
+library(scales)
+library(forcats)
+
+#Data 
+slk_wide <- data.frame(
+  Group = c("Breast (C50)", "Prostate (C61)", "Lung (C33-34)",
+            "Colorectal (C18-20)", "Digestive (C15-17,C21-26)",
+            "Female reproductive (C51-58)",
+            "Male reproductive excl prostate (C60-63)", "Urinary (C64-68)",
+            "Brain & CNS (C69-72)", "Endocrine (C73-75)", "Skin (C43-44)",
+            "Hematological (C81-96)", "Other cancers"),
+  Y2020 = c(72801194,47138623,33818367,64706117,46936834,19871601,6910067,
+            36830870,12159130,5523525,31928288,81594888,61065648),
+  Y2021 = c(85786218,55611553,35281189,72537910,49135855,23509555,4727888,
+            39485599,11731517,6661874,39485263,104930247,65072312),
+  Y2022 = c(84863967,57795744,34742289,67328057,46166641,21893158,4382376,
+            34855076,10100063,6370295,34965251,111645400,61499294),
+  Y2023 = c(101530746,57268984,36746939,50821205,29315873,13825655,2761234,
+            24770670,5904579,3814457,45404893,112820946,54107953)
+)
+
+
+slk_long <- slk_wide %>%
+  pivot_longer(starts_with("Y"), names_to = "Year", values_to = "Expenditure") %>%
+  mutate(Year = as.numeric(gsub("Y", "", Year)))
+
+# ---- Cumulative % change vs 2020 baseline
+slk_change <- slk_long %>%
+  group_by(Group) %>%
+  mutate(
+    PctChange = (Expenditure / Expenditure[Year == 2020] - 1) * 100,
+    OrderKey  = PctChange[Year == 2023]      
+  ) %>%
+  ungroup() %>%
+  mutate(Group = fct_reorder(Group, OrderKey, .desc = FALSE))
+
+
+slk_lim <- max(abs(slk_change$PctChange))
+
+#Heatmap 
+slk_heat_change <- ggplot(slk_change,
+                          aes(x = factor(Year), y = Group, fill = PctChange)) +
+  geom_tile(colour = "grey96", linewidth = 0.5) +
+  geom_tile(data = subset(slk_change, Year == 2020),
+            fill = "grey90", colour = "grey96", linewidth = 0.5) +
+  geom_text(aes(label = ifelse(Year == 2020, "ref",
+                               paste0(ifelse(PctChange >= 0, "+", ""),
+                                      round(PctChange), "%"))),
+            size = 3.4, family = "serif",
+            colour = ifelse(abs(slk_change$PctChange) > 45, "white", "grey15")) +
+  scale_fill_gradient2(
+    low = "#2166AC", mid = "white", high = "#B2182B", midpoint = 0,
+    limits = c(-slk_lim, slk_lim),
+    labels = function(x) paste0(x, "%")
+  ) +
+  scale_x_discrete(expand = c(0, 0)) +
+  scale_y_discrete(expand = c(0, 0)) +
+  labs(title = "Change in Cancer Expenditure by Diagnosis, Slovakia",
+       x = NULL, y = NULL, fill = "Cum.change\nvs 2020") +
+  theme_minimal(base_size = 11, base_family = "serif") +
+  theme(
+    plot.title   = element_text(hjust = 0.5, size = 13, face = "bold",
+                                margin = margin(b = 10)),
+    axis.text.y  = element_text(size = 10),
+    axis.text.x  = element_text(size = 9),
+    panel.grid   = element_blank(),
+    legend.title = element_text(size = 9),
+    legend.text  = element_text(size = 8),
+    plot.margin  = margin(t = 8, r = 8, b = 8, l = 8)
+  )
+
+print(slk_heat_change)
+
+#ggsave("slovakia_change_heatmap_MAIN.png", slk_heat_change,
+#       width = 8, height = 7, dpi = 400, bg = "white")
+```
+
+```{r}
+
+# APPENDIX: stacked area of absolute composition
+
+slk_area_data <- slk_long %>%
+  mutate(Group = fct_reorder(Group, Expenditure, .fun = sum))
+
+slk_area <- ggplot(slk_area_data, aes(x = Year, y = Expenditure, fill = Group)) +
+  geom_area(alpha = 0.9, linewidth = 0) +
+  scale_y_continuous(labels = label_number(scale = 1e-6)) +
+  scale_x_continuous(breaks = 2020:2023) +
+  scale_fill_viridis_d(option = "viridis") +
+  labs(title = "Cancer Expenditure by Diagnosis, Slovakia (absolute)",
+       x = "Year", y = "Expenditure (million EUR €)", fill = "Diagnostic group") +
+  theme_minimal(base_size = 11, base_family = "serif") +
+  theme(
+    plot.title      = element_text(hjust = 0.5, size = 13, face = "bold"),
+    legend.title    = element_text(size = 9),
+    legend.text     = element_text(size = 7.5),
+    legend.key.size = unit(0.4, "cm"),
+    axis.title      = element_text(size = 11),
+    panel.grid      = element_blank()
+  )
+
+print(slk_area)
+#ggsave("slovakia_area_APPENDIX.png", slk_area,
+#       width = 9, height = 5.5, dpi = 400, bg = "white")
+```
+
+
+*Figure 5. Estonia per component*
+
+```{r}
+#Estonia — per-component cancer expenditure by year 
+#MAIN:     PPP$  (EUR / 0.583732)| APPENDIX: € millions
+
+#MAIN TEXT — PPP$
+est_ppp_cf <- 0.583732   # PPP conversion factor, Estonia 2024 (LCU per int'l $)
+
+est_ppp_wide <- data.frame(
+  Year        = 2020:2025,
+  Medical     = c(209656068, 208724363, 193779454, 220426075, 243356243, 253085490),
+  Pharmaceuticals = c(36572590, 39916309, 33261917, 35960324, 42146735, 40991489),
+  Screening   = c(3610400, 5038765, 5621370, 6626341, 7511966, 8046626)
+) %>%
+  mutate(across(-Year, ~ .x / est_ppp_cf))   # EUR -> PPP$
+
+est_ppp_long <- est_ppp_wide %>%
+  pivot_longer(-Year, names_to = "Category", values_to = "Value") %>%
+  group_by(Year) %>% mutate(pct = Value / sum(Value)) %>% ungroup() %>%
+  mutate(Category = factor(Category,
+           levels = c("Screening", "Pharmaceuticals", "Medical"),
+           labels = c("Screening", "Pharmaceuticals", "Other medical services")))
+
+est_ppp_pal <- c("Screening" = "#E69F00", "Pharmaceuticals" = "#0072B2",
+                 "Other medical services" = "#009E73")
+
+est_ppp_A <- ggplot(est_ppp_long, aes(x = factor(Year), y = pct, fill = Category)) +
+  geom_col(width = 0.72, colour = "white", linewidth = 0.3,
+           position = position_stack(reverse = TRUE)) +
+  geom_text(aes(label = ifelse(pct >= 0.04,
+                               paste0(round(pct*100), "%\n(",
+                                      round(Value/1e6, 1), "M)"), "")),
+            position = position_stack(vjust = 0.5, reverse = TRUE),
+            colour = "white", size = 3.4, family = "serif", lineheight = 0.9) +
+  scale_fill_manual(values = est_ppp_pal, name = NULL) +
+  scale_y_continuous(labels = label_percent(), expand = expansion(mult = c(0, 0.02))) +
+  labs(title = "Per-Component Cancer Expenditure by Year, Estonia (PPP$)",
+       x = NULL, y = "Share of total expenditure") +
+  theme_classic(base_size = 15, base_family = "serif") +
+  theme(plot.title = element_text(hjust = .5, size = 16), legend.position = "bottom")
+
+est_ppp_scr <- est_ppp_long %>% filter(Category == "Screening")
+
+est_ppp_B <- ggplot(est_ppp_scr, aes(x = factor(Year), y = pct)) +
+  geom_col(width = 0.72, fill = est_ppp_pal["Screening"]) +
+  geom_text(aes(label = paste0(round(pct*100, 1), "%\n(",
+                               round(Value/1e6, 1), "M PPP$)")),
+            vjust = -0.3, size = 3.4, family = "serif", lineheight = 0.9) +
+  scale_y_continuous(labels = label_percent(), limits = c(0, 0.036),
+                     expand = expansion(mult = c(0, 0))) +
+  labs(title = "Screening share (detail)", x = NULL, y = "Screening share") +
+  theme_classic(base_size = 15, base_family = "serif") +
+  theme(plot.title = element_text(hjust = .5, size = 15))
+
+est_ppp_combo <- est_ppp_A / est_ppp_B + plot_layout(heights = c(2.4, 1))
+print(est_ppp_combo)
+
+#ggsave("estonia_composition_PPP_MAIN.png", est_ppp_combo,
+#       width = 9, height = 8, dpi = 400, bg = "white")
+
+# APPENDIX — € millions
+est_wide <- data.frame(
+  Year        = 2020:2025,
+  Medical     = c(209656068, 208724363, 193779454, 220426075, 243356243, 253085490),
+  Pharmaceuticals = c(36572590, 39916309, 33261917, 35960324, 42146735, 40991489),
+  Screening   = c(3610400, 5038765, 5621370, 6626341, 7511966, 8046626)
+)
+
+est_long <- est_wide %>%
+  pivot_longer(-Year, names_to = "Category", values_to = "Value") %>%
+  group_by(Year) %>% mutate(pct = Value / sum(Value)) %>% ungroup() %>%
+  mutate(Category = factor(Category,
+           levels = c("Screening", "Pharmaceuticals", "Medical"),
+           labels = c("Screening", "Pharmaceuticals", "Other medical services")))
+
+est_pal <- c("Screening" = "#E69F00", "Pharmaceuticals" = "#0072B2",
+             "Other medical services" = "#009E73")
+
+estA <- ggplot(est_long, aes(x = factor(Year), y = pct, fill = Category)) +
+  geom_col(width = 0.72, colour = "white", linewidth = 0.3,
+           position = position_stack(reverse = TRUE)) +
+  geom_text(aes(label = ifelse(pct >= 0.04,
+                               paste0(round(pct*100), "%\n(",
+                                      round(Value/1e6, 1), "M\u20AC)"), "")),
+            position = position_stack(vjust = 0.5, reverse = TRUE),
+            colour = "white", size = 3.4, family = "serif", lineheight = 0.9) +
+  scale_fill_manual(values = est_pal, name = NULL) +
+  scale_y_continuous(labels = label_percent(), expand = expansion(mult = c(0, 0.02))) +
+  labs(title = "Per-Component Cancer Expenditure by Year, Estonia",
+       x = NULL, y = "Share of total expenditure") +
+  theme_classic(base_size = 15, base_family = "serif") +
+  theme(plot.title = element_text(hjust = .5, size = 16), legend.position = "bottom")
+
+est_scr <- est_long %>% filter(Category == "Screening")
+
+estB <- ggplot(est_scr, aes(x = factor(Year), y = pct)) +
+  geom_col(width = 0.72, fill = est_pal["Screening"]) +
+  geom_text(aes(label = paste0(round(pct*100, 1), "%\n(",
+                               round(Value/1e6, 1), "M\u20AC)")),
+            vjust = -0.3, size = 3.4, family = "serif", lineheight = 0.9) +
+  scale_y_continuous(labels = label_percent(), limits = c(0, 0.036),
+                     expand = expansion(mult = c(0, 0))) +
+  labs(title = "Screening share (detail)", x = NULL, y = "Screening share") +
+  theme_classic(base_size = 15, base_family = "serif") +
+  theme(plot.title = element_text(hjust = .5, size = 15))
+
+est_combo <- estA / estB + plot_layout(heights = c(2.4, 1))
+print(est_combo)
+#ggsave("estonia_composition_EUR_APPENDIX.png", est_combo,
+#       width = 9, height = 8, dpi = 400, bg = "white")
+```
+
