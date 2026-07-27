@@ -1,4 +1,4 @@
-There are 10 files in this repository: 4 R Markdown files, 4 knitted HTML files, and an Excel file. 
+There are 10 files in this repository: 4 R Markdown files, 4 knitted HTML files, 1 PDF file, and an Excel file. 
 The files need to be downloaded from GitHub to be viewed properly. 
 
 1. Excel Analysis file - with all economic analyses like purchasing power parity and inflation conversions.
